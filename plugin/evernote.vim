@@ -1,12 +1,8 @@
-function! HelloWorld()
+function! s:ListNotebooks()
   exec 'silent split evernote:something'
-  call RubyMsg()
+  ruby msg
   setlocal buftype=nofile bufhidden=unload noswapfile
   setlocal nomodified
-endfunction
-
-function! RubyMsg()
-  ruby msg
 endfunction
 
 ruby << EOF
@@ -92,7 +88,7 @@ ruby << EOF
     notebooks = noteStore.listNotebooks(authToken)
     defaultNotebook = notebooks[0]
     notebooks.each { |notebook| 
-      vb.append(0, "  * #{notebook.name}")
+      vb.append(0, "* #{notebook.name}")
       if (notebook.defaultNotebook)
         defaultNotebook = notebook
       end
@@ -100,3 +96,5 @@ ruby << EOF
 
   end
 EOF
+
+map <C-e> :call <SID>ListNotebooks()<CR>
