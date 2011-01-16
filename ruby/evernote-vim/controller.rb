@@ -135,8 +135,14 @@ module EvernoteVim
       noteBuffer = $curbuf
       # Append Note Content
       content = /<en-note>(.+)<\/en-note>/.match(content)[1]
-      content = content.gsub(/<([a-z\-\/]+)>/i, '')
+      content = content.gsub(/<br( \/)?>/, "\n").gsub(/<([a-z\-\/]+)>/i, '')
       noteBuffer.append(0, content)
+      VIM::command("setlocal nomodified")
+      VIM::command("au! BufWriteCmd <buffer> ruby $evernote.saveNote")
+    end
+
+    def saveNote
+      puts "Saving..."
     end
   end
 end
