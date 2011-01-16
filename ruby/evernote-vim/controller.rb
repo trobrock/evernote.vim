@@ -78,6 +78,14 @@ module EvernoteVim
       @authToken = authResult.authenticationToken
     end
 
+    def acceptSelection(line)
+      if line =~ /^\* /
+        listNotes(line)
+      else
+        openNote(line)
+      end
+    end
+
     def listNotebooks
       @buffer = $curbuf
       noteStoreUrl = @noteStoreUrlBase + @user.shardId
@@ -96,17 +104,17 @@ module EvernoteVim
         end
       }
 
-      VIM::command("exec 'nnoremap <silent> <buffer> <cr> :call <SID>ListNotes()<cr>'")
+      VIM::command("exec 'nnoremap <silent> <buffer> <cr> :call <SID>AcceptSelection()<cr>'")
     end
 
-    def listNotes(notebook)
-      notebook = notebook.gsub(/^(\* )/, '').gsub(/\(default\)$/, '')
+    def listNotes(line)
+      notebook = line.gsub(/^(\* )/, '').gsub(/\(default\)$/, '')
       notebook = @notebooks.detect { |n| n.name = notebook }
       filter = Evernote::EDAM::NoteStore::NoteFilter.new
       filter.notebookGuid = notebook.guid
 
       begin
-        noteList = @noteStore.findNotes(@authToken,
+        @noteList = @noteStore.findNotes(@authToken,
                                        filter,
                                        0,
                                        Evernote::EDAM::Limits::EDAM_USER_NOTES_MAX)
@@ -114,9 +122,20 @@ module EvernoteVim
         puts e.inspect
       end
 
-      noteList.notes.each do |note|
-        puts note.title
+      @noteList.notes.each do |note|
+        @buffer.append(@buffer.line_number, note.title)
       end
+    end
+
+    def openNote(line)
+      note = @noteList.notes.detect { |n| n.title == line }
+      content = @noteStore.getNoteContent(@authToken, note.guid)
+      # Create a new buffer
+      VIM::command("silent split evernote:#{note.title.gsub(/\s/, '-')}")
+      noteBuffer = $curbuf
+      # Append Note Content
+      content = /<en-note>(.+)<\/en-note>/.match(content)[1]
+      noteBuffer.append(0, content)
     end
   end
 end

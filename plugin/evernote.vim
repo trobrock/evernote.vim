@@ -1,13 +1,13 @@
 function! s:ListNotebooks()
-  exec 'silent split evernote:something'
+  exec 'silent split evernote:notebooks'
   ruby $evernote.listNotebooks
   setlocal buftype=nofile bufhidden=unload noswapfile
   setlocal nomodified
 endfunction
 
-function! s:ListNotes()
+function! s:AcceptSelection()
   let curline = getline('.')
-  ruby $evernote.listNotes(VIM::evaluate('curline'))
+  ruby $evernote.acceptSelection(VIM::evaluate('curline'))
 endfunction
 
 ruby << EOF
