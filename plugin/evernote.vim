@@ -5,6 +5,11 @@ function! s:ListNotebooks()
   setlocal nomodified
 endfunction
 
+function! s:ListNotes()
+  let curline = getline('.')
+  ruby listNotes(VIM::evaluate('curline'))
+endfunction
+
 ruby << EOF
   require "digest/md5"
   require "thrift/types"
@@ -18,9 +23,11 @@ ruby << EOF
   require "Evernote/EDAM/note_store"
   require "Evernote/EDAM/limits_constants.rb"
 
-  def msg
-    vb = VIM::Buffer.current
+  def listNotes(notebook)
+    puts notebook.gsub(/^(\* )/, '').gsub(/\(default\)$/, '')
+  end
 
+  def msg
     consumerKey = "trobrock"
     consumerSecret = "8f750bb98a7168c5"
 
@@ -88,9 +95,11 @@ ruby << EOF
     notebooks = noteStore.listNotebooks(authToken)
     defaultNotebook = notebooks[0]
     notebooks.each { |notebook| 
-      vb.append(0, "* #{notebook.name}")
       if (notebook.defaultNotebook)
+        $curbuf.append(0, "* #{notebook.name} (default)")
         defaultNotebook = notebook
+      else
+        $curbuf.append(0, "* #{notebook.name}")
       end
     }
 
