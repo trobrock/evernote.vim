@@ -135,6 +135,7 @@ module EvernoteVim
       noteBuffer = $curbuf
       # Append Note Content
       content = /<en-note>(.+)<\/en-note>/.match(content)[1]
+      content = content.gsub(/<([a-z\-\/]+)>/i, '')
       noteBuffer.append(0, content)
     end
   end
