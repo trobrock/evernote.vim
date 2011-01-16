@@ -94,6 +94,7 @@ ruby << EOF
       end
     }
 
+    VIM::command("exec 'nnoremap <silent> <buffer> <cr> :call <SID>ListNotes()<cr>'")
   end
 EOF
 
