@@ -83,11 +83,11 @@ module EvernoteVim
       noteStoreUrl = @noteStoreUrlBase + @user.shardId
       noteStoreTransport = Thrift::HTTPClientTransport.new(noteStoreUrl)
       noteStoreProtocol = Thrift::BinaryProtocol.new(noteStoreTransport)
-      noteStore = Evernote::EDAM::NoteStore::NoteStore::Client.new(noteStoreProtocol)
+      @noteStore = Evernote::EDAM::NoteStore::NoteStore::Client.new(noteStoreProtocol)
 
-      notebooks = noteStore.listNotebooks(@authToken)
-      defaultNotebook = notebooks[0]
-      notebooks.each { |notebook| 
+      @notebooks = @noteStore.listNotebooks(@authToken)
+      defaultNotebook = @notebooks[0]
+      @notebooks.each { |notebook| 
         if (notebook.defaultNotebook)
           @buffer.append(0, "* #{notebook.name} (default)")
           defaultNotebook = notebook
@@ -100,7 +100,23 @@ module EvernoteVim
     end
 
     def listNotes(notebook)
-      puts notebook.gsub(/^(\* )/, '').gsub(/\(default\)$/, '')
+      notebook = notebook.gsub(/^(\* )/, '').gsub(/\(default\)$/, '')
+      notebook = @notebooks.detect { |n| n.name = notebook }
+      filter = Evernote::EDAM::NoteStore::NoteFilter.new
+      filter.notebookGuid = notebook.guid
+
+      begin
+        noteList = @noteStore.findNotes(@authToken,
+                                       filter,
+                                       0,
+                                       Evernote::EDAM::Limits::EDAM_USER_NOTES_MAX)
+      rescue Evernote::EDAM::Error::EDAMUserException => e
+        puts e.inspect
+      end
+
+      noteList.notes.each do |note|
+        puts note.title
+      end
     end
   end
 end
