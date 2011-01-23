@@ -13,7 +13,8 @@ require "Evernote/EDAM/limits_constants.rb"
 module EvernoteVim
   class Controller
     def initialize
-      @buffer = nil
+      @prevBuffer = []
+
       @consumerKey = "trobrock"
       @consumerSecret = "8f750bb98a7168c5"
 
@@ -51,7 +52,7 @@ module EvernoteVim
         errorText = Evernote::EDAM::Error::EDAMErrorCode::VALUE_MAP[errorCode]
 
         puts "Authentication failed (parameter: #{parameter} errorCode: #{errorText})"
-        
+
         if (errorCode == Evernote::EDAM::Error::EDAMErrorCode::INVALID_AUTH)
           if (parameter == "consumerKey")
             if (@consumerKey == "en-edamtest")
@@ -78,16 +79,17 @@ module EvernoteVim
       @authToken = authResult.authenticationToken
     end
 
-    def acceptSelection(line)
-      if line =~ /^\* /
-        listNotes(line)
-      else
-        openNote(line)
-      end
+    def selectNotebook()
+      notebook = VIM::evaluate('getline(".")')
+      listNotes(notebook)
+    end
+
+    def selectNote()
+      note = VIM::evaluate('getline(".")')
+      openNote(note)
     end
 
     def listNotebooks
-      @buffer = $curbuf
       noteStoreUrl = @noteStoreUrlBase + @user.shardId
       noteStoreTransport = Thrift::HTTPClientTransport.new(noteStoreUrl)
       noteStoreProtocol = Thrift::BinaryProtocol.new(noteStoreTransport)
@@ -97,14 +99,14 @@ module EvernoteVim
       defaultNotebook = @notebooks[0]
       @notebooks.each { |notebook| 
         if (notebook.defaultNotebook)
-          @buffer.append(0, "* #{notebook.name} (default)")
+          $curbuf.append(0, "* #{notebook.name} (default)")
           defaultNotebook = notebook
         else
-          @buffer.append(0, "* #{notebook.name}")
+          $curbuf.append(0, "* #{notebook.name}")
         end
       }
 
-      VIM::command("exec 'nnoremap <silent> <buffer> <cr> :call <SID>AcceptSelection()<cr>'")
+      VIM::command("exec 'nnoremap <silent> <buffer> <cr> :ruby $evernote.selectNotebook()<cr>'")
     end
 
     def listNotes(line)
@@ -122,27 +124,42 @@ module EvernoteVim
         puts e.inspect
       end
 
+      @prevBuffer << $curbuf.number
+      VIM::command("q")
+      VIM::command("silent split evernote:notes")
       @noteList.notes.each do |note|
-        @buffer.append(@buffer.line_number, note.title)
+        $curbuf.append(0, note.title)
       end
+
+      VIM::command("setlocal buftype=nofile bufhidden= noswapfile")
+      VIM::command("setlocal nomodified")
+      VIM::command("exec 'nnoremap <silent> <buffer> <cr> :ruby $evernote.selectNote()<cr>'")
+      VIM::command("map <silent> <buffer> <C-T> :ruby $evernote.previousScreen()<cr>")
     end
 
     def openNote(line)
       note = @noteList.notes.detect { |n| n.title == line }
       content = @noteStore.getNoteContent(@authToken, note.guid)
+
+      @prevBuffer << $curbuf.number
       # Create a new buffer
       VIM::command("silent split evernote:#{note.title.gsub(/\s/, '-')}")
-      noteBuffer = $curbuf
+
       # Append Note Content
       content = /<en-note>(.+)<\/en-note>/.match(content)[1]
       content = content.gsub(/<br( \/)?>/, "\n").gsub(/<([a-z\-\/]+)>/i, '')
-      noteBuffer.append(0, content)
+
+      $curbuf.append(0, content)
       VIM::command("setlocal nomodified")
       VIM::command("au! BufWriteCmd <buffer> ruby $evernote.saveNote")
     end
 
     def saveNote
       puts "Saving..."
+    end
+
+    def previousScreen
+      VIM::command("buffer #{@prevBuffer.pop}")
     end
   end
 end
