@@ -141,7 +141,6 @@ module EvernoteVim
       note = @noteList.notes.detect { |n| n.title == line }
       content = @noteStore.getNoteContent(@authToken, note.guid)
 
-      @prevBuffer << $curbuf.number
       # Create a new buffer
       VIM::command("silent split evernote:#{note.title.gsub(/\s/, '-')}")
 
