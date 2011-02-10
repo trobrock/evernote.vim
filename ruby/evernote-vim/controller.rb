@@ -155,7 +155,7 @@ module EvernoteVim
     end
 
     def saveNote
-      puts "Saving..."
+      puts "Saving... Not implemented yet"
     end
 
     def previousScreen
