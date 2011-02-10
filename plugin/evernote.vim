@@ -20,4 +20,4 @@ ruby << EOF
     $evernote = EvernoteVim::Controller.new
 EOF
 
-map <C-e> :call <SID>ListNotebooks()<CR>
+map <Leader>ev :call <SID>ListNotebooks()<CR>
