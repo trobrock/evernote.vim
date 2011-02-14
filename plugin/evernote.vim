@@ -7,6 +7,14 @@
 " WebPage: http://github.com/trobrock/evernote-vim
 " License: MIT
 "
+if !exists('g:evernote_vim_username')
+  let g:evernote_vim_username = ''
+endif
+
+if !exists('g:evernote_vim_password')
+  let g:evernote_vim_password = ''
+endif
+
 function! s:ListNotebooks()
   exec 'silent split evernote:notebooks'
   ruby $evernote.listNotebooks

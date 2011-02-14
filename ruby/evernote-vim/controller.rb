@@ -21,13 +21,22 @@ module EvernoteVim
       @evernoteHost = "sandbox.evernote.com"
       @userStoreUrl = "https://#{@evernoteHost}/edam/user"
       @noteStoreUrlBase = "https://#{@evernoteHost}/edam/note/"
-
-      authenticate
     end
 
     def authenticate
-      username = "trobrock"
-      password = "testing"
+      username = VIM::evaluate("g:evernote_vim_username")
+      password = VIM::evaluate("g:evernote_vim_password")
+
+      if username.empty?
+        VIM::command("let user_input = input('Username: ')")
+        username = VIM::evaluate("user_input")
+        VIM::command("let g:evernote_vim_username = user_input")
+      end
+      if password.empty?
+        VIM::command("let user_input = input('Password: ')")
+        password = VIM::evaluate("user_input")
+        VIM::command("let g:evernote_vim_password = user_input")
+      end
 
       userStoreTransport = Thrift::HTTPClientTransport.new(@userStoreUrl)
       userStoreProtocol = Thrift::BinaryProtocol.new(userStoreTransport)
@@ -90,6 +99,8 @@ module EvernoteVim
     end
 
     def listNotebooks
+      authenticate_if_needed
+
       noteStoreUrl = @noteStoreUrlBase + @user.shardId
       noteStoreTransport = Thrift::HTTPClientTransport.new(noteStoreUrl)
       noteStoreProtocol = Thrift::BinaryProtocol.new(noteStoreTransport)
@@ -110,6 +121,8 @@ module EvernoteVim
     end
 
     def listNotes(line)
+      authenticate_if_needed
+
       notebook = line.gsub(/^(\* )/, '').gsub(/\(default\)$/, '')
       notebook = @notebooks.detect { |n| n.name = notebook }
       filter = Evernote::EDAM::NoteStore::NoteFilter.new
@@ -131,13 +144,15 @@ module EvernoteVim
         $curbuf.append(0, note.title)
       end
 
-      VIM::command("setlocal buftype=nofile bufhidden= noswapfile")
+      VIM::command("setlocal buftype=nofile bufhidden=hide noswapfile")
       VIM::command("setlocal nomodified")
       VIM::command("exec 'nnoremap <silent> <buffer> <cr> :ruby $evernote.selectNote()<cr>'")
       VIM::command("map <silent> <buffer> <C-T> :ruby $evernote.previousScreen()<cr>")
     end
 
     def openNote(line)
+      authenticate_if_needed
+
       note = @noteList.notes.detect { |n| n.title == line }
       content = @noteStore.getNoteContent(@authToken, note.guid)
 
@@ -159,6 +174,13 @@ module EvernoteVim
 
     def previousScreen
       VIM::command("buffer #{@prevBuffer.pop}")
+    end
+
+    private
+
+    def authenticate_if_needed
+      return if @authToken && @user
+      authenticate
     end
   end
 end
