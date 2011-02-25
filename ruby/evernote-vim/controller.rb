@@ -107,11 +107,9 @@ module EvernoteVim
       @noteStore = Evernote::EDAM::NoteStore::NoteStore::Client.new(noteStoreProtocol)
 
       @notebooks = @noteStore.listNotebooks(@authToken)
-      defaultNotebook = @notebooks[0]
       @notebooks.each { |notebook| 
         if (notebook.defaultNotebook)
           $curbuf.append(0, "* #{notebook.name} (default)")
-          defaultNotebook = notebook
         else
           $curbuf.append(0, "* #{notebook.name}")
         end
@@ -124,18 +122,11 @@ module EvernoteVim
       authenticate_if_needed
 
       notebook = line.gsub(/^(\* )/, '').gsub(/\(default\)$/, '')
-      notebook = @notebooks.detect { |n| n.name = notebook }
+      notebook = @notebooks.detect { |n| n.name == notebook }
       filter = Evernote::EDAM::NoteStore::NoteFilter.new
       filter.notebookGuid = notebook.guid
 
-      begin
-        @noteList = @noteStore.findNotes(@authToken,
-                                       filter,
-                                       0,
-                                       Evernote::EDAM::Limits::EDAM_USER_NOTES_MAX)
-      rescue Evernote::EDAM::Error::EDAMUserException => e
-        puts e.inspect
-      end
+      @noteList = @noteStore.findNotes(@authToken, filter, 0, Evernote::EDAM::Limits::EDAM_USER_NOTES_MAX)
 
       @prevBuffer << $curbuf.number
       VIM::command("q")
@@ -144,7 +135,7 @@ module EvernoteVim
         $curbuf.append(0, note.title)
       end
 
-      VIM::command("setlocal buftype=nofile bufhidden=hide noswapfile")
+      VIM::command("setlocal buftype=nofile bufhidden=unload noswapfile")
       VIM::command("setlocal nomodified")
       VIM::command("exec 'nnoremap <silent> <buffer> <cr> :ruby $evernote.selectNote()<cr>'")
       VIM::command("map <silent> <buffer> <C-T> :ruby $evernote.previousScreen()<cr>")
