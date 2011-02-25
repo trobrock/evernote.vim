@@ -23,7 +23,7 @@ function! s:ListNotebooks()
 endfunction
 
 ruby << EOF
-    require "ruby/evernote-vim/controller.rb"
+    require "evernote-vim/controller.rb"
 
     $evernote = EvernoteVim::Controller.new
 EOF
