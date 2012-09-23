@@ -1,3 +1,4 @@
+require "rubygems"
 require "digest/md5"
 require "thrift/types"
 require "thrift/struct"

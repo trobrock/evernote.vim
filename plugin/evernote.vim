@@ -23,9 +23,9 @@ function! s:ListNotebooks()
 endfunction
 
 ruby << EOF
-    require "evernote-vim/controller.rb"
-
-    $evernote = EvernoteVim::Controller.new
+  $LOAD_PATH.unshift(File.join(ENV['HOME'], '.vim', 'bundle', 'evernote.vim', 'ruby'))
+  require "evernote-vim/controller"
+  $evernote = EvernoteVim::Controller.new
 EOF
 
 map <Leader>ev :call <SID>ListNotebooks()<CR>
