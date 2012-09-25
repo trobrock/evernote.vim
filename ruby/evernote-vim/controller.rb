@@ -41,11 +41,11 @@ module EvernoteVim
       userStore = Evernote::EDAM::UserStore::UserStore::Client.new(userStoreProtocol)
 
       versionOK = userStore.checkVersion("Ruby EDAMTest",
-                                      Evernote::EDAM::UserStore::EDAM_VERSION_MAJOR,
-                                      Evernote::EDAM::UserStore::EDAM_VERSION_MINOR)
-      if (!versionOK)
+                                         Evernote::EDAM::UserStore::EDAM_VERSION_MAJOR,
+                                         Evernote::EDAM::UserStore::EDAM_VERSION_MINOR)
+      if !versionOK
         put "EDAM version is out of date #{versionOK}"
-        exit(1)
+        exit 1
       end
 
       # Authenticate the user
@@ -60,26 +60,26 @@ module EvernoteVim
 
         puts "Authentication failed (parameter: #{parameter} errorCode: #{errorText})"
 
-        if (errorCode == Evernote::EDAM::Error::EDAMErrorCode::INVALID_AUTH)
-          if (parameter == "consumerKey")
-            if (@consumerKey == "en-edamtest")
+        if errorCode == Evernote::EDAM::Error::EDAMErrorCode::INVALID_AUTH
+          if parameter == "consumerKey"
+            if @consumerKey == "en-edamtest"
               puts "You must replace the variables consumerKey and consumerSecret with the values you received from Evernote."
             else
               puts "Your consumer key was not accepted by #{@evernoteHost}"
             end
             puts "If you do not have an API Key from Evernote, you can request one from http://www.evernote.com/about/developer/api"
-          elsif (parameter == "username")
+          elsif parameter == "username"
             puts "You must authenticate using a username and password from #{@evernoteHost}"
-            if (@evernoteHost != "www.evernote.com")
+            if @evernoteHost != "www.evernote.com"
               puts "Note that your production Evernote account will not work on #{@evernoteHost},"
               puts "you must register for a separate test account at https://#{@evernoteHost}/Registration.action"
             end
-          elsif (parameter == "password")
+          elsif parameter == "password"
             puts "The password that you entered is incorrect"
           end
         end
 
-        exit(1)
+        exit 1
       end
 
       @user = authResult.user
@@ -104,14 +104,22 @@ module EvernoteVim
       noteStoreProtocol = Thrift::BinaryProtocol.new(noteStoreTransport)
       @noteStore = Evernote::EDAM::NoteStore::NoteStore::Client.new(noteStoreProtocol)
 
+      # Clear current buffer.
+=begin
+      for i in 1..$curbuf.length
+        $curbuf.delete(i)
+      end
+=end
+
+      # Append notebooks to current buffer.
       @notebooks = @noteStore.listNotebooks(@authToken)
-      @notebooks.each { |notebook| 
-        if (notebook.defaultNotebook)
+      @notebooks.each do |notebook|
+        if notebook.defaultNotebook
           $curbuf.append(0, "* #{notebook.name} (default)")
         else
           $curbuf.append(0, "* #{notebook.name}")
         end
-      }
+      end
 
       VIM::command("exec 'nnoremap <silent> <buffer> <cr> :ruby $evernote.selectNotebook()<cr>'")
     end
