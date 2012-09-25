@@ -105,11 +105,9 @@ module EvernoteVim
       @noteStore = Evernote::EDAM::NoteStore::NoteStore::Client.new(noteStoreProtocol)
 
       # Clear current buffer.
-=begin
-      for i in 1..$curbuf.length
-        $curbuf.delete(i)
+      while $curbuf.count > 1
+        $curbuf.delete $curbuf.count
       end
-=end
 
       # Append notebooks to current buffer.
       @notebooks = @noteStore.listNotebooks(@authToken)
@@ -120,6 +118,10 @@ module EvernoteVim
           $curbuf.append(0, "* #{notebook.name}")
         end
       end
+
+      # VIM::Buffer.append adds an empty line after the appended line.
+      # Delete it.
+      $curbuf.delete $curbuf.count
 
       VIM::command("exec 'nnoremap <silent> <buffer> <cr> :ruby $evernote.selectNotebook()<cr>'")
     end
