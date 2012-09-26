@@ -35,18 +35,8 @@ module EvernoteVim
         :consumer_key => @consumerKey,
         :consumer_secret => @consumerSecret
       }
-
       userStore = Evernote::UserStore.new(@userStoreUrl, config)
 
-      versionOK = userStore.checkVersion("Ruby EDAMTest",
-                                         Evernote::EDAM::UserStore::EDAM_VERSION_MAJOR,
-                                         Evernote::EDAM::UserStore::EDAM_VERSION_MINOR)
-      if !versionOK
-        put "EDAM version is out of date #{versionOK}"
-        exit 1
-      end
-
-      # Authenticate the user
       begin
         authResult = userStore.authenticate
       rescue Evernote::EDAM::Error::EDAMUserException => ex
