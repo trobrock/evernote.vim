@@ -150,7 +150,7 @@ module EvernoteVim
     def get_text(element)
       all_text = element.inject("") do |memo, child|
         if child.is_a? REXML::Text
-          memo += child.to_s + "\n"
+          memo += child.to_s
         else
           memo += get_text(child)
         end
