@@ -118,9 +118,7 @@ module EvernoteVim
           $curbuf.append(0, "* #{notebook.name}")
         end
       end
-
-      # VIM::Buffer.append adds an empty line after the appended line.
-      # Delete it.
+      # VIM::Buffer.append adds an empty line after the appended line. Delete it.
       $curbuf.delete $curbuf.count
 
       VIM::command("exec 'nnoremap <silent> <buffer> <cr> :ruby $evernote.selectNotebook()<cr>'")
@@ -138,10 +136,11 @@ module EvernoteVim
 
       @prevBuffer << $curbuf.number
       VIM::command("q")
-      VIM::command("silent split evernote:notes")
+      VIM::command("silent 50vsplit evernote:notes")
       @noteList.notes.each do |note|
         $curbuf.append(0, note.title)
       end
+      $curbuf.delete $curbuf.count
 
       VIM::command("setlocal buftype=nofile bufhidden=unload noswapfile")
       VIM::command("setlocal nomodified")
@@ -155,10 +154,11 @@ module EvernoteVim
       note = @noteList.notes.detect { |n| n.title == line }
       content = @noteStore.getNoteContent(@authToken, note.guid)
 
-      # Create a new buffer
-      VIM::command("silent split evernote:#{note.title.gsub(/\s/, '-')}")
+      # Create new buffer to the right.
+      VIM::command("silent wincmd l")
+      VIM::command("silent edit evernote:#{note.title.gsub(/\s/, '-')}")
 
-      # Append Note Content
+      # Append Note Content.
       content = /<en-note>(.+)<\/en-note>/.match(content)[1]
       content = content.gsub(/<br( \/)?>/, "\n").gsub(/<([a-z\-\/]+)>/i, '')
 
