@@ -1,11 +1,4 @@
 require "rubygems"
-require "digest/md5"
-require "thrift/types"
-require "thrift/struct"
-require "thrift/protocol/base_protocol"
-require "thrift/protocol/binary_protocol"
-require "thrift/transport/base_transport"
-require "thrift/transport/http_client_transport"
 require "evernote"
 
 module EvernoteVim
