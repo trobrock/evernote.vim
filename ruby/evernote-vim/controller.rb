@@ -1,5 +1,6 @@
 require "rubygems"
 require "evernote"
+require "rexml/document"
 
 module EvernoteVim
   class Controller
@@ -86,7 +87,7 @@ module EvernoteVim
     def listNotes(line)
       authenticate_if_needed
 
-      notebook = line.gsub(/^(\* )/, '').gsub(/\(default\)$/, '')
+      notebook = line.gsub(/^(\* )/, '').gsub(/ \(default\)$/, '')
       notebook = @notebooks.detect { |n| n.name == notebook }
       filter = Evernote::EDAM::NoteStore::NoteFilter.new
       filter.notebookGuid = notebook.guid
@@ -111,17 +112,15 @@ module EvernoteVim
       authenticate_if_needed
 
       @note = @noteList.notes.detect { |n| n.title == line }
-      content = @noteStore.getNoteContent(@authToken, @note.guid)
+      xmlContent = @noteStore.getNoteContent(@authToken, @note.guid)
 
       # Create new buffer to the right of current buffer.
       VIM::command("silent wincmd l")
       VIM::command("silent edit evernote:#{@note.title.gsub(/\s/, '-')}")
 
       # Append note content.
-      content = /<en-note>(.+)<\/en-note>/.match(content)[1]
-      content = content.gsub(/<br( \/)?>/, "\n").gsub(/<([a-z\-\/]+)>/i, '')
-
-      $curbuf.append(0, content)
+      doc = REXML::Document.new(xmlContent)
+      $curbuf.append(0, get_text(doc.elements['en-note']))
       VIM::command("setlocal nomodified")
       VIM::command("au! BufWriteCmd <buffer> ruby $evernote.saveNote")
     end
@@ -146,6 +145,18 @@ module EvernoteVim
     def authenticate_if_needed
       return if @authToken && @user
       authenticate
+    end
+
+    def get_text(element)
+      all_text = element.inject("") do |memo, child|
+        if child.is_a? REXML::Text
+          memo += child.to_s + "\n"
+        else
+          memo += get_text(child)
+        end
+        memo
+      end
+      all_text
     end
   end
 end
