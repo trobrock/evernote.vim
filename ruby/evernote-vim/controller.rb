@@ -143,7 +143,7 @@ module EvernoteVim
       $curbuf.delete $curbuf.count
 
       VIM::command("setlocal buftype=nofile bufhidden=unload noswapfile")
-      VIM::command("setlocal nomodified")
+      VIM::command("setlocal nomodifiable nomodified")
       VIM::command("exec 'nnoremap <silent> <buffer> <cr> :ruby $evernote.selectNote()<cr>'")
       VIM::command("map <silent> <buffer> <C-T> :ruby $evernote.previousScreen()<cr>")
     end

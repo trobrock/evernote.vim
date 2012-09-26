@@ -19,7 +19,7 @@ function! s:ListNotebooks()
   exec 'silent 50vsplit evernote:notebooks'
   ruby $evernote.listNotebooks
   setlocal buftype=nofile bufhidden=hide noswapfile
-  setlocal nomodified
+  setlocal nomodifiable nomodified
 endfunction
 
 ruby << EOF
