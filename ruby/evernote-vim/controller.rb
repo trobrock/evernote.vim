@@ -118,7 +118,7 @@ module EvernoteVim
       VIM::command("silent wincmd l")
       VIM::command("silent edit evernote:#{@note.title.gsub(/\s/, '-')}")
 
-      # Append note content.
+      # Parse XML and append it note buffer.
       doc = REXML::Document.new(xmlContent)
       $curbuf.append(0, get_text(doc.elements['en-note']))
       VIM::command("setlocal nomodified")
