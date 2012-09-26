@@ -36,9 +36,14 @@ module EvernoteVim
         VIM::command("let g:evernote_vim_password = user_input")
       end
 
-      userStoreTransport = Thrift::HTTPClientTransport.new(@userStoreUrl)
-      userStoreProtocol = Thrift::BinaryProtocol.new(userStoreTransport)
-      userStore = Evernote::EDAM::UserStore::UserStore::Client.new(userStoreProtocol)
+      config = {
+        :username => username,
+        :password => password,
+        :consumer_key => @consumerKey,
+        :consumer_secret => @consumerSecret
+      }
+
+      userStore = Evernote::UserStore.new(@userStoreUrl, config)
 
       versionOK = userStore.checkVersion("Ruby EDAMTest",
                                          Evernote::EDAM::UserStore::EDAM_VERSION_MAJOR,
@@ -50,8 +55,7 @@ module EvernoteVim
 
       # Authenticate the user
       begin
-        authResult = userStore.authenticate(username, password,
-                                            @consumerKey, @consumerSecret)
+        authResult = userStore.authenticate
       rescue Evernote::EDAM::Error::EDAMUserException => ex
         # See http://www.evernote.com/about/developer/api/ref/UserStore.html#Fn_UserStore_authenticate
         parameter = ex.parameter
@@ -100,9 +104,7 @@ module EvernoteVim
       authenticate_if_needed
 
       noteStoreUrl = @noteStoreUrlBase + @user.shardId
-      noteStoreTransport = Thrift::HTTPClientTransport.new(noteStoreUrl)
-      noteStoreProtocol = Thrift::BinaryProtocol.new(noteStoreTransport)
-      @noteStore = Evernote::EDAM::NoteStore::NoteStore::Client.new(noteStoreProtocol)
+      @noteStore = Evernote::NoteStore.new(noteStoreUrl)
 
       # Clear current buffer.
       while $curbuf.count > 1
