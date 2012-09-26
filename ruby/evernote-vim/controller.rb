@@ -41,7 +41,7 @@ module EvernoteVim
       begin
         authResult = userStore.authenticate
       rescue Evernote::UserStore::AuthenticationFailure
-        VIM::message("An error occurred while authenticated to Evernote")
+        VIM::message("An error occurred while authenticating to Evernote")
         exit 1
       end
 
