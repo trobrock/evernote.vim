@@ -16,16 +16,16 @@ if !exists('g:evernote_vim_password')
 endif
 
 function! s:ListNotebooks()
-  exec 'silent split evernote:notebooks'
+  exec 'silent 50vsplit evernote:notebooks'
   ruby $evernote.listNotebooks
   setlocal buftype=nofile bufhidden=hide noswapfile
-  setlocal nomodified
+  setlocal nomodifiable nomodified
 endfunction
 
 ruby << EOF
-    require "evernote-vim/controller.rb"
-
-    $evernote = EvernoteVim::Controller.new
+  $LOAD_PATH.unshift(File.join(ENV['HOME'], '.vim', 'bundle', 'evernote.vim', 'ruby'))
+  require "evernote-vim/controller"
+  $evernote = EvernoteVim::Controller.new
 EOF
 
 map <Leader>ev :call <SID>ListNotebooks()<CR>

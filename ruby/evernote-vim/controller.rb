@@ -1,14 +1,6 @@
-require "digest/md5"
-require "thrift/types"
-require "thrift/struct"
-require "thrift/protocol/base_protocol"
-require "thrift/protocol/binary_protocol"
-require "thrift/transport/base_transport"
-require "thrift/transport/http_client_transport"
-require "Evernote/EDAM/user_store"
-require "Evernote/EDAM/user_store_constants.rb"
-require "Evernote/EDAM/note_store"
-require "Evernote/EDAM/limits_constants.rb"
+require "rubygems"
+require "evernote"
+require "rexml/document"
 
 module EvernoteVim
   class Controller
@@ -38,50 +30,19 @@ module EvernoteVim
         VIM::command("let g:evernote_vim_password = user_input")
       end
 
-      userStoreTransport = Thrift::HTTPClientTransport.new(@userStoreUrl)
-      userStoreProtocol = Thrift::BinaryProtocol.new(userStoreTransport)
-      userStore = Evernote::EDAM::UserStore::UserStore::Client.new(userStoreProtocol)
+      config = {
+        :username => username,
+        :password => password,
+        :consumer_key => @consumerKey,
+        :consumer_secret => @consumerSecret
+      }
+      userStore = Evernote::UserStore.new(@userStoreUrl, config)
 
-      versionOK = userStore.checkVersion("Ruby EDAMTest",
-                                      Evernote::EDAM::UserStore::EDAM_VERSION_MAJOR,
-                                      Evernote::EDAM::UserStore::EDAM_VERSION_MINOR)
-      if (!versionOK)
-        put "EDAM version is out of date #{versionOK}"
-        exit(1)
-      end
-
-      # Authenticate the user
       begin
-        authResult = userStore.authenticate(username, password,
-                                            @consumerKey, @consumerSecret)
-      rescue Evernote::EDAM::Error::EDAMUserException => ex
-        # See http://www.evernote.com/about/developer/api/ref/UserStore.html#Fn_UserStore_authenticate
-        parameter = ex.parameter
-        errorCode = ex.errorCode
-        errorText = Evernote::EDAM::Error::EDAMErrorCode::VALUE_MAP[errorCode]
-
-        puts "Authentication failed (parameter: #{parameter} errorCode: #{errorText})"
-
-        if (errorCode == Evernote::EDAM::Error::EDAMErrorCode::INVALID_AUTH)
-          if (parameter == "consumerKey")
-            if (@consumerKey == "en-edamtest")
-              puts "You must replace the variables consumerKey and consumerSecret with the values you received from Evernote."
-            else
-              puts "Your consumer key was not accepted by #{@evernoteHost}"
-            end
-            puts "If you do not have an API Key from Evernote, you can request one from http://www.evernote.com/about/developer/api"
-          elsif (parameter == "username")
-            puts "You must authenticate using a username and password from #{@evernoteHost}"
-            if (@evernoteHost != "www.evernote.com")
-              puts "Note that your production Evernote account will not work on #{@evernoteHost},"
-              puts "you must register for a separate test account at https://#{@evernoteHost}/Registration.action"
-            end
-          elsif (parameter == "password")
-            puts "The password that you entered is incorrect"
-          end
-        end
-
-        exit(1)
+        authResult = userStore.authenticate
+      rescue Evernote::UserStore::AuthenticationFailure
+        VIM::message("An error occurred while authenticating to Evernote")
+        exit 1
       end
 
       @user = authResult.user
@@ -101,19 +62,24 @@ module EvernoteVim
     def listNotebooks
       authenticate_if_needed
 
-      noteStoreUrl = @noteStoreUrlBase + @user.shardId
-      noteStoreTransport = Thrift::HTTPClientTransport.new(noteStoreUrl)
-      noteStoreProtocol = Thrift::BinaryProtocol.new(noteStoreTransport)
-      @noteStore = Evernote::EDAM::NoteStore::NoteStore::Client.new(noteStoreProtocol)
+      @noteStore = Evernote::NoteStore.new(@noteStoreUrlBase + @user.shardId)
 
+      # Clear current buffer.
+      while $curbuf.count > 1
+        $curbuf.delete $curbuf.count
+      end
+
+      # Display list of notebooks in current buffer.
       @notebooks = @noteStore.listNotebooks(@authToken)
-      @notebooks.each { |notebook| 
-        if (notebook.defaultNotebook)
+      @notebooks.each do |notebook|
+        if notebook.defaultNotebook
           $curbuf.append(0, "* #{notebook.name} (default)")
         else
           $curbuf.append(0, "* #{notebook.name}")
         end
-      }
+      end
+      # VIM::Buffer.append adds an empty line after the appended line. Delete it.
+      $curbuf.delete $curbuf.count
 
       VIM::command("exec 'nnoremap <silent> <buffer> <cr> :ruby $evernote.selectNotebook()<cr>'")
     end
@@ -121,7 +87,7 @@ module EvernoteVim
     def listNotes(line)
       authenticate_if_needed
 
-      notebook = line.gsub(/^(\* )/, '').gsub(/\(default\)$/, '')
+      notebook = line.gsub(/^(\* )/, '').gsub(/ \(default\)$/, '')
       notebook = @notebooks.detect { |n| n.name == notebook }
       filter = Evernote::EDAM::NoteStore::NoteFilter.new
       filter.notebookGuid = notebook.guid
@@ -130,13 +96,14 @@ module EvernoteVim
 
       @prevBuffer << $curbuf.number
       VIM::command("q")
-      VIM::command("silent split evernote:notes")
+      VIM::command("silent 50vsplit evernote:notes")
       @noteList.notes.each do |note|
         $curbuf.append(0, note.title)
       end
+      $curbuf.delete $curbuf.count
 
       VIM::command("setlocal buftype=nofile bufhidden=unload noswapfile")
-      VIM::command("setlocal nomodified")
+      VIM::command("setlocal nomodifiable nomodified")
       VIM::command("exec 'nnoremap <silent> <buffer> <cr> :ruby $evernote.selectNote()<cr>'")
       VIM::command("map <silent> <buffer> <C-T> :ruby $evernote.previousScreen()<cr>")
     end
@@ -144,23 +111,29 @@ module EvernoteVim
     def openNote(line)
       authenticate_if_needed
 
-      note = @noteList.notes.detect { |n| n.title == line }
-      content = @noteStore.getNoteContent(@authToken, note.guid)
+      @note = @noteList.notes.detect { |n| n.title == line }
+      xmlContent = @noteStore.getNoteContent(@authToken, @note.guid)
 
-      # Create a new buffer
-      VIM::command("silent split evernote:#{note.title.gsub(/\s/, '-')}")
+      # Create new buffer to the right of current buffer.
+      VIM::command("silent wincmd l")
+      VIM::command("silent edit evernote:#{@note.title.gsub(/\s/, '-')}")
 
-      # Append Note Content
-      content = /<en-note>(.+)<\/en-note>/.match(content)[1]
-      content = content.gsub(/<br( \/)?>/, "\n").gsub(/<([a-z\-\/]+)>/i, '')
-
-      $curbuf.append(0, content)
+      # Parse XML and append it note buffer.
+      doc = REXML::Document.new(xmlContent)
+      $curbuf.append(0, get_text(doc.elements['en-note']))
       VIM::command("setlocal nomodified")
       VIM::command("au! BufWriteCmd <buffer> ruby $evernote.saveNote")
     end
 
     def saveNote
-      puts "Saving... Not implemented yet"
+      content = ""
+      for i in 1..$curbuf.count
+        content += $curbuf[i] + "<br/>"
+      end
+      @note.content = '<?xml version="1.0" encoding="UTF-8"?>' +
+        '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">' +
+        "<en-note>#{content}</en-note>"
+      @noteStore.updateNote(@authToken, @note)
     end
 
     def previousScreen
@@ -172,6 +145,18 @@ module EvernoteVim
     def authenticate_if_needed
       return if @authToken && @user
       authenticate
+    end
+
+    def get_text(element)
+      all_text = element.inject("") do |memo, child|
+        if child.is_a? REXML::Text
+          memo += child.to_s
+        else
+          memo += get_text(child)
+        end
+        memo
+      end
+      all_text
     end
   end
 end
