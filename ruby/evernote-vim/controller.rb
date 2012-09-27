@@ -1,6 +1,9 @@
 require "rubygems"
-require "evernote"
-require "rexml/document"
+begin
+  require "evernote"
+  require "rexml/document"
+rescue LoadError
+end
 
 module EvernoteVim
   class Controller
