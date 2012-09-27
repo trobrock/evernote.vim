@@ -106,7 +106,7 @@ module EvernoteVim
       $curbuf.delete $curbuf.count
 
       VIM::command("setlocal buftype=nofile bufhidden=unload noswapfile")
-      VIM::command("setlocal nomodifiable nomodified")
+      VIM::command("setlocal nomodified")
       VIM::command("exec 'nnoremap <silent> <buffer> <cr> :ruby $evernote.selectNote()<cr>'")
       VIM::command("map <silent> <buffer> <C-T> :ruby $evernote.previousScreen()<cr>")
     end
@@ -121,9 +121,13 @@ module EvernoteVim
       VIM::command("silent wincmd l")
       VIM::command("silent edit evernote:#{@note.title.gsub(/\s/, '-')}")
 
-      # Parse XML and append it note buffer.
-      doc = REXML::Document.new(xmlContent)
-      $curbuf.append(0, get_text(doc.elements['en-note']))
+      # Parse note and append it buffer.
+      noteParser = EvernoteVim::NoteParser.new
+      REXML::Document.parse_stream(xmlContent, noteParser)
+      noteParser.get_content.each_with_index do |line, i|
+        $curbuf.append(i, line)
+      end
+
       VIM::command("setlocal nomodified")
       VIM::command("au! BufWriteCmd <buffer> ruby $evernote.saveNote")
     end
@@ -148,18 +152,6 @@ module EvernoteVim
     def authenticate_if_needed
       return if @authToken && @user
       authenticate
-    end
-
-    def get_text(element)
-      all_text = element.inject("") do |memo, child|
-        if child.is_a? REXML::Text
-          memo += child.to_s
-        else
-          memo += get_text(child)
-        end
-        memo
-      end
-      all_text
     end
   end
 end

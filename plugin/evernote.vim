@@ -15,15 +15,22 @@ if !exists('g:evernote_vim_password')
   let g:evernote_vim_password = ''
 endif
 
+if !exists('g:evernote_vim_ruby_dir')
+  let g:evernote_vim_ruby_dir = ''
+endif
+
 function! s:ListNotebooks()
   exec 'silent 50vsplit evernote:notebooks'
   ruby $evernote.listNotebooks
   setlocal buftype=nofile bufhidden=hide noswapfile
-  setlocal nomodifiable nomodified
+  setlocal nomodified
 endfunction
 
 ruby << EOF
-  $LOAD_PATH.unshift(File.join(ENV['HOME'], '.vim', 'bundle', 'evernote.vim', 'ruby'))
+  ruby_dir = VIM::evaluate("g:evernote_vim_ruby_dir").empty? ? \
+             File.join(ENV['HOME'], '.vim', 'bundle', 'evernote.vim', 'ruby') : \
+             VIM::evaluate("g:evernote_vim_ruby_dir")
+  $LOAD_PATH.unshift(ruby_dir)
   require 'net/http'
   # hack to eliminate the SSL certificate verification notification
   class Net::HTTP
@@ -34,7 +41,7 @@ ruby << EOF
       @ssl_context.verify_mode = OpenSSL::SSL::VERIFY_NONE
     end
   end
-  require "evernote-vim/controller"
+  Dir["#{ruby_dir}/evernote-vim/*.rb"].each {|file| require file }
   $evernote = EvernoteVim::Controller.new
 EOF
 
