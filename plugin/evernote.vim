@@ -23,7 +23,7 @@ function! s:ListNotebooks()
   exec 'silent 50vsplit evernote:notebooks'
   ruby $evernote.listNotebooks
   setlocal buftype=nofile bufhidden=hide noswapfile
-  setlocal nomodifiable nomodified
+  setlocal nomodified
 endfunction
 
 ruby << EOF
@@ -41,7 +41,7 @@ ruby << EOF
       @ssl_context.verify_mode = OpenSSL::SSL::VERIFY_NONE
     end
   end
-  require "evernote-vim/controller"
+  Dir["#{ruby_dir}/evernote-vim/*.rb"].each {|file| require file }
   $evernote = EvernoteVim::Controller.new
 EOF
 
