@@ -13,10 +13,12 @@ In the [TODO.md](evernote.vim/blob/master/TODO.md) file there is a semi-up to da
 * Add the following variables to your .vimrc:
 
   `let g:evernote_vim_username = "your_evernote_username"`
+
   `let g:evernote_vim_password = "your_evernote_password"`
+
   `let g:evernote_vim_ruby_dir = "full_path_to_the_evernote_vim_ruby_directory"`
 
-For example:
+For example, on OS X:
 
   `let g:evernote_vim_ruby_dir = "/Users/evernotelover/.vim/bundle/evernote.vim/ruby"`
 
