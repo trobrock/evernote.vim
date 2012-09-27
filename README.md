@@ -6,14 +6,18 @@ In the [TODO.md](evernote.vim/blob/master/TODO.md) file there is a semi-up to da
 
 #Installation
 * Ensure that your Vim has ruby baked-in.
-  `vim --version | grep ruby` should show the `+ruby` flag
-* Install the [evernote gem](http://rubygems.org/gems/evernote)
+
+  `vim --version | grep ruby` should show the `+ruby` flag.
+* Install the [evernote gem](http://rubygems.org/gems/evernote).
 * Install the evernote.vim plugin as you would install any other Vim plugin. You can obviously use [Pathogen](https://github.com/tpope/vim-pathogen/).
 * Add the following variables to your .vimrc:
+
   `let g:evernote_vim_username = "your_evernote_username"`
   `let g:evernote_vim_password = "your_evernote_password"`
   `let g:evernote_vim_ruby_dir = "full_path_to_the_evernote_vim_ruby_directory"`
+
 For example:
+
   `let g:evernote_vim_ruby_dir = "/Users/evernotelover/.vim/bundle/evernote.vim/ruby"`
 
 #Source Structure
