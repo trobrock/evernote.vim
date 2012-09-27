@@ -15,6 +15,10 @@ if !exists('g:evernote_vim_password')
   let g:evernote_vim_password = ''
 endif
 
+if !exists('g:evernote_vim_ruby_dir')
+  let g:evernote_vim_ruby_dir = ''
+endif
+
 function! s:ListNotebooks()
   exec 'silent 50vsplit evernote:notebooks'
   ruby $evernote.listNotebooks
@@ -23,7 +27,10 @@ function! s:ListNotebooks()
 endfunction
 
 ruby << EOF
-  $LOAD_PATH.unshift(File.join(ENV['HOME'], '.vim', 'bundle', 'evernote.vim', 'ruby'))
+  ruby_dir = VIM::evaluate("g:evernote_vim_ruby_dir").empty? ? \
+             File.join(ENV['HOME'], '.vim', 'bundle', 'evernote.vim', 'ruby') : \
+             VIM::evaluate("g:evernote_vim_ruby_dir")
+  $LOAD_PATH.unshift(ruby_dir)
   require "evernote-vim/controller"
   $evernote = EvernoteVim::Controller.new
 EOF
