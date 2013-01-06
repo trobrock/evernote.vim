@@ -29,7 +29,7 @@ endfunction
 ruby << EOF
   ruby_dir = VIM::evaluate("g:evernote_vim_ruby_dir").empty? ? \
              File.join(ENV['HOME'], '.vim', 'bundle', 'evernote.vim', 'ruby') : \
-             VIM::evaluate("g:evernote_vim_ruby_dir")
+             File.expand_path(VIM::evaluate("g:evernote_vim_ruby_dir"))
   $LOAD_PATH.unshift(ruby_dir)
   require 'net/http'
   # hack to eliminate the SSL certificate verification notification
